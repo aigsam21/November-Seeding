@@ -1,4 +1,41 @@
 {
-  "updated_at": null,
-  "videos": []
+  "updated_at": "2026-11-24T05:34:26.458Z",
+  "test_mode": true,
+  "videos": [
+    {
+      "video_id": "7704443174869060871",
+      "url": "https://www.tiktok.com/@vehgomes8/video/7704443174869060871",
+      "owner": "강미경",
+      "creator": "vehgomes_",
+      "views": 157
+    },
+    {
+      "video_id": "7703555413471464717",
+      "url": "https://www.tiktok.com/@_virginia_mae_/video/7703555413471464717",
+      "owner": "강미경",
+      "creator": "_virginia_mae_",
+      "views": 347
+    },
+    {
+      "video_id": "7704690146897120545",
+      "url": "https://www.tiktok.com/@orsolinicamilla/video/7704690146897120545",
+      "owner": "강미경",
+      "creator": "orsolinicamilla",
+      "views": 3816
+    },
+    {
+      "video_id": "7701705726430809375",
+      "url": "https://www.tiktok.com/@shaprei.elise/video/7701705726430809375",
+      "owner": "강미경",
+      "creator": "shapreielise",
+      "views": 357
+    },
+    {
+      "video_id": "7703892230846582038",
+      "url": "https://www.tiktok.com/@dailyvivx/video/7703892230846582038",
+      "owner": "강미경",
+      "creator": "dailyvivx",
+      "views": 378
+    }
+  ]
 }
