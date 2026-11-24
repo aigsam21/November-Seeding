@@ -179,3 +179,176 @@ ${f(c)}<br>${f(v)}
 </p>
 
 </section>`;
+
+// Load TikTok views from metrics.json
+
+async function loadTikTokMetrics() {
+  try {
+    const response = await fetch(
+      './metrics.json?t=' + Date.now(),
+      { cache: 'no-store' }
+    );
+
+    if (!response.ok) {
+      throw new Error('Cannot load metrics.json');
+    }
+
+    const metrics = await response.json();
+
+    const unique = new Map();
+
+    for (const v of metrics.videos || []) {
+      if (
+        v.video_id &&
+        typeof v.views === 'number' &&
+        Number.isFinite(v.views) &&
+        v.views >= 0
+      ) {
+        unique.set(String(v.video_id), v);
+      }
+    }
+
+    const videos = [...unique.values()];
+
+    if (!videos.length) return;
+
+    const totalViews = videos.reduce(
+      (sum, v) => sum + v.views, 0
+    );
+
+    const averageViews = Math.round(
+      totalViews / videos.length
+    );
+
+    const ownerViews = {};
+    const ownerCounts = {};
+
+    for (const v of videos) {
+      ownerViews[v.owner] =
+        (ownerViews[v.owner] || 0) + v.views;
+
+      ownerCounts[v.owner] =
+        (ownerCounts[v.owner] || 0) + 1;
+    }
+
+    const ownerValue = name =>
+      ownerCounts[name] ? f(ownerViews[name]) : '—';
+
+    const escapeHtml = value =>
+      String(value ?? '').replace(
+        /[&<>"']/g,
+        c => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[c]
+      );
+
+    function videoLink(value) {
+      try {
+        const u = new URL(value);
+
+        if (
+          u.protocol === 'https:' &&
+          (
+            u.hostname === 'tiktok.com' ||
+            u.hostname.endsWith('.tiktok.com')
+          )
+        ) {
+          return `<a href="${escapeHtml(u.href)}"
+            target="_blank"
+            rel="noopener noreferrer">TikTok ↗</a>`;
+        }
+      } catch {}
+
+      return '—';
+    }
+
+    // Update KPI table
+
+    const ownerSection =
+      document.querySelector('section.owner');
+
+    if (ownerSection) {
+      ownerSection.innerHTML = `
+        ${heading('02', '담당자별 11월 KPI')}
+
+        ${table(
+          ['담당자', '콘텐츠', '크리에이터', '조회수'],
+          [
+            ...owners.map(([n, c, v]) => [
+              '',
+              n,
+              f(v) + '개',
+              f(c) + '명',
+              ownerValue(n)
+            ]),
+            [
+              'total',
+              'TOTAL',
+              f(DATA.total[1]) + '개',
+              f(DATA.total[0]) + '명',
+              f(totalViews)
+            ]
+          ]
+        )}
+      `;
+    }
+
+    // TOP 10 videos
+
+    const top10 = [...videos]
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    const viewsSection = [...root.querySelectorAll('section')]
+      .find(section =>
+        section.querySelector('h2')
+          ?.textContent.includes('TikTok 조회수 분석')
+      );
+
+    if (viewsSection) {
+      viewsSection.innerHTML = `
+        ${heading('03', '11월 TikTok 조회수 분석')}
+
+        <div class="metrics">
+
+          ${card('TOTAL VIEWS', f(totalViews))}
+          ${card('AVERAGE VIEWS', f(averageViews))}
+          ${card('조회수 확인 영상', f(videos.length) + '개')}
+
+          ${owners.map(([name]) =>
+            card(name + ' · 조회수', ownerValue(name))
+          ).join('')}
+
+        </div>
+
+        ${metrics.test_mode
+          ? '<p class="note">테스트 수집 결과 · 전체 집계 전</p>'
+          : '<p class="note">조회수 확인 완료 영상 기준 · 중복 영상 제외</p>'
+        }
+
+        <h3>조회수 TOP 10</h3>
+
+        ${table(
+          ['순위', '담당자', '크리에이터', '조회수', '영상'],
+          top10.map((v, i) => [
+            '',
+            i + 1,
+            escapeHtml(v.owner),
+            escapeHtml(v.creator),
+            f(v.views),
+            videoLink(v.url)
+          ])
+        )}
+      `;
+    }
+
+  } catch (error) {
+    console.error('TikTok metrics:', error);
+  }
+}
+
+loadTikTokMetrics();
