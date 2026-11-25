@@ -1,3 +1,4 @@
+
 const f = n => Number(n || 0).toLocaleString('ko-KR');
 
 const esc = x => String(x ?? '').replace(
@@ -38,13 +39,21 @@ ${cells.map(x => `<td>${x}</td>`).join('')}
 </div>`;
 
 const owners = ['강미경', '신유', '유연식']
-    .map(n => (DATA.owner || []).find(r => r[0] === n) || [n, 0, 0]);
-
-const levels = Array.isArray(DATA.level)
-    ? DATA.level
-    : [];
+    .map(n =>
+        (DATA.owner || []).find(r => r[0] === n)
+        || [n, 0, 0]
+    );
 
 const total = DATA.total || [0, 0];
+
+const levels = Array.isArray(DATA.level)
+    ? DATA.level.filter(r => Number(r[1]) > 0)
+    : [];
+
+const venn = DATA.venn || {};
+
+const platformCount = name =>
+    (DATA.platform || []).find(r => r[0] === name)?.[2] || 0;
 
 const hist = [
     [145,145,106,106,153,131,108,98,168,116,117,117],
@@ -120,7 +129,8 @@ ${heading('04', '콘텐츠가 게시된 플랫폼')}
     class="venn"
     viewBox="0 0 560 310"
     style="width:100%;max-width:700px;display:block;margin:auto"
-    role="img">
+    role="img"
+    aria-label="플랫폼별 크리에이터 현황">
 
     <circle
         cx="205" cy="150" r="140"
@@ -147,7 +157,7 @@ ${heading('04', '콘텐츠가 게시된 플랫폼')}
         </text>
 
         <text x="155" y="140" font-size="34" font-weight="bold">
-            330
+            ${venn.tiktokOnly ?? '—'}
         </text>
 
         <text x="285" y="100" font-size="16">
@@ -155,7 +165,7 @@ ${heading('04', '콘텐츠가 게시된 플랫폼')}
         </text>
 
         <text x="285" y="135" font-size="30" font-weight="bold">
-            81
+            ${venn.bothOnly ?? '—'}
         </text>
 
         <text x="405" y="105" font-size="17">
@@ -163,7 +173,7 @@ ${heading('04', '콘텐츠가 게시된 플랫폼')}
         </text>
 
         <text x="405" y="140" font-size="34" font-weight="bold">
-            12
+            ${venn.instagramOnly ?? '—'}
         </text>
 
         <text x="285" y="184" font-size="12">
@@ -171,7 +181,7 @@ ${heading('04', '콘텐츠가 게시된 플랫폼')}
         </text>
 
         <text x="285" y="205" font-size="21" font-weight="bold">
-            10
+            ${venn.allThree ?? '—'}
         </text>
 
         <text x="285" y="238" font-size="11">
@@ -183,9 +193,13 @@ ${heading('04', '콘텐츠가 게시된 플랫폼')}
 </svg>
 
 <div class="metrics platform-counts">
-    ${card('TikTok · 콘텐츠', '447개')}
-    ${card('Instagram · 콘텐츠', '106개')}
-    ${card('기타 · 콘텐츠', '10개')}
+
+    ${card('TikTok · 콘텐츠', f(platformCount('TikTok')) + '개')}
+
+    ${card('Instagram · 콘텐츠', f(platformCount('Instagram')) + '개')}
+
+    ${card('기타 · 콘텐츠', f(platformCount('기타')) + '개')}
+
 </div>
 
 </div>
@@ -201,13 +215,8 @@ ${heading('05', '크리에이터 Level별 현황')}
 ${levels.length
     ? levels.map(([n, c]) => {
 
-        const levelTotal = levels.reduce(
-            (sum, r) => sum + Number(r[1] || 0),
-            0
-        );
-
-        const percent = levelTotal
-            ? c / levelTotal * 100
+        const percent = total[0]
+            ? c / total[0] * 100
             : 0;
 
         return `
@@ -233,13 +242,9 @@ ${levels.length
 
 </div>
 
-<p class="note">
-동일 ID 1명 기준 · 레벨 불일치 또는 미기재는 확인 필요
-</p>
-
 </section>`;
 
-// Просмотры
+// 02 и 03. KPI и просмотры
 
 function render(groups) {
 
@@ -257,6 +262,7 @@ function render(groups) {
     const own = n => videos.filter(v => v.owner === n);
 
     document.querySelector('#owner').innerHTML = `
+
     ${heading('02', '담당자별 11월 KPI')}
 
     ${table(
@@ -304,29 +310,7 @@ function render(groups) {
 
         ${card('조회수 확인 영상', f(videos.length) + '개')}
 
-        ${owners.map(([n]) =>
-            card(n + ' · 조회수', value(own(n)))
-        ).join('')}
-
     </div>
-
-    <p class="note">
-        TikTok 조회수 + Instagram 재생수 · 확인된 영상만 집계
-    </p>
-
-    ${groups.map(g => {
-
-        const expected = g.name === 'TikTok'
-            ? 447
-            : 106;
-
-        return `
-        <p class="note">
-            ${g.name}: ${esc(g.status)}
-            · ${g.videos.length}개 / ${expected}개
-            ${g.date ? ' · ' + esc(g.date) : ''}
-        </p>`;
-    }).join('')}
 
     <h3>조회수 TOP 10</h3>
 
@@ -422,17 +406,10 @@ async function load(name, metric, input) {
         );
 
         const urls = new Set(
-            src.map(v => norm(v.url))
-        );
-
-        const shortCreators = new Set(
-            src.filter(v => !v.video_id)
-                .map(v => v.owner + '|' + v.creator)
+            src.map(v => norm(v.url)).filter(Boolean)
         );
 
         const unique = new Map();
-
-        let uncertain = 0;
 
         for (const v of m.videos || []) {
 
@@ -446,17 +423,17 @@ async function load(name, metric, input) {
 
             const exact =
                 ids.has(String(v.video_id)) ||
-                urls.has(norm(v.url));
+                urls.has(norm(v.url)) ||
+                (
+                    v.original_url &&
+                    urls.has(norm(v.original_url))
+                ) ||
+                (
+                    v.source_url &&
+                    urls.has(norm(v.source_url))
+                );
 
             if (!exact) {
-
-                if (
-                    name === 'TikTok' &&
-                    shortCreators.has(v.owner + '|' + v.creator)
-                ) {
-                    uncertain++;
-                }
-
                 continue;
             }
 
@@ -469,11 +446,9 @@ async function load(name, metric, input) {
         return {
             name,
             videos: [...unique.values()],
-            status:
-                (m.test_mode ? '테스트' : '수집 완료') +
-                (uncertain
-                    ? ` · 단축 URL 매칭 미확인 ${uncertain}개 제외`
-                    : ''),
+            status: m.test_mode
+                ? '테스트'
+                : '수집 완료',
             date: m.updated_at
         };
 
