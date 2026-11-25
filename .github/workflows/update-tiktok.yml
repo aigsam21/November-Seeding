@@ -22,14 +22,17 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
       - name: Collect TikTok views from Apify
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           TEST_MODE: ${{ inputs.test_mode || 'false' }}
         run: node update_tiktok.mjs
+
       - name: Save updated metrics.json
         run: |
           git config user.name "github-actions[bot]"
@@ -37,5 +40,5 @@ jobs:
           git add metrics.json
           git diff --cached --quiet && exit 0
           git commit -m "Update TikTok views from Apify"
-         git pull --rebase origin main
-git push
+          git pull --rebase origin main
+          git push
