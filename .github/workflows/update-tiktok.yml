@@ -37,4 +37,5 @@ jobs:
           git add metrics.json
           git diff --cached --quiet && exit 0
           git commit -m "Update TikTok views from Apify"
-          git push
+         git pull --rebase origin main
+git push
