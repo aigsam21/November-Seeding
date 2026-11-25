@@ -1,8 +1,59 @@
-const DATA = {"owner": [["신유", 146, 204], ["유연식", 144, 169], ["강미경", 122, 158]], "country": [["멕시코", 97, 116], ["미국", 85, 104], ["폴란드", 53, 78], ["캐나다", 58, 70], ["스페인", 39, 60], ["이탈리아", 35, 45], ["영국", 22, 28], ["독일", 9, 12], ["프랑스", 10, 12], ["네덜란드", 4, 6]], "product": [["Peel Shot Kojic Acid Turmeric Body Spray", 225, 270], ["Peel Shot Black Rice Ampoule", 164, 229], ["Cemenrete Calcium Multi Balm", 11, 15], ["CACTOX 3-STEP NOSE MASK PACK", 5, 8], ["Peel Shot TX (Tranexamic Acid) Body Spray", 3, 5], ["CACTOX PORE RELIEF MULTI BALM", 2, 3], ["TX Kojic Acid Turmeric Toner Pad", 1, 1]], "cohort": [["11월 시딩", 177, 246], ["10월 시딩", 171, 209], ["9월 시딩", 43, 48], ["기존 시딩", 21, 28]], "platform": [["TikTok", 399, 423], ["Instagram", 96, 98]], "total": [411, 531]};DATA.level = [
-    ["Nano", 342],
-    ["Micro", 74],
-    ["Mid", 9],
-    ["Macro", 0],
-    ["Mega", 0],
-    ["확인 필요", 7]
-];
+const DATA = {
+    "owner": [
+        ["신유", 154, 217],
+        ["유연식", 155, 182],
+        ["강미경", 124, 164]
+    ],
+
+    "country": [
+        ["미국", 85, 104],
+        ["캐나다", 62, 78],
+        ["멕시코", 98, 118],
+        ["영국", 25, 30],
+        ["독일", 10, 13],
+        ["폴란드", 55, 81],
+        ["스페인", 42, 65],
+        ["이탈리아", 39, 51],
+        ["프랑스", 10, 12],
+        ["네덜란드", 4, 6],
+        ["미기재", 3, 5]
+    ],
+
+    "product": [
+        ["Peel Shot Kojic Acid Turmeric Body Spray", 233, 285],
+        ["Peel Shot Black Rice Ampoule", 176, 245],
+        ["Cemenrete Calcium Multi Balm", 11, 15],
+        ["CACTOX 3-STEP NOSE MASK PACK", 6, 9],
+        ["Peel Shot TX (Tranexamic Acid) Body Spray", 3, 5],
+        ["CACTOX PORE RELIEF MULTI BALM", 2, 3],
+        ["TX Kojic Acid Turmeric Toner Pad", 1, 1]
+    ],
+
+    "cohort": [
+        ["11월 시딩", 192, 269],
+        ["10월 시딩", 175, 216],
+        ["9월 시딩", 44, 49],
+        ["기존 시딩", 22, 29]
+    ],
+
+    "platform": [
+        ["TikTok", 420, 447],
+        ["Instagram", 103, 106],
+        ["기타", 10, 10]
+    ],
+
+    "level": [
+        ["Nano", 341],
+        ["Micro", 74],
+        ["Mid", 9],
+    ],
+
+    "venn": {
+        "tiktokOnly": 329,
+        "instagramOnly": 12,
+        "bothOnly": 81,
+        "allThree": 10
+    },
+
+    "total": [432, 563]
+};
