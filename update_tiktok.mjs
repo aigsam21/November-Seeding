@@ -91,7 +91,7 @@ function getViews(v) {
 async function resolveVideo(v) {
   const source = {
     ...v,
-    original_url: v.original_url || v.url,
+    original_url: v.url,
     video_id: extractId(v.video_id)
       || extractId(v.url)
   };
@@ -277,6 +277,12 @@ async function scrape(batch) {
 
 let matched = 0;
 let failedBatches = 0;
+let stopCollection = false;
+
+function isCriticalError(error) {
+  return /Apify start failed: (401|402|403|429)\b/
+    .test(error.message);
+}
 
 function saveItem(item, source) {
   if (item.errorCode || item.error) return false;
@@ -292,8 +298,11 @@ function saveItem(item, source) {
     item.webVideoUrl,
     item.url,
     source.url
-  ].find(u => extractId(u) === id)
-    || `https://www.tiktok.com/video/${id}`;
+  ].find(u =>
+    typeof u === 'string' &&
+    /^https?:\/\//.test(u) &&
+    extractId(u) === id
+  ) || source.url;
 
   const originalUrl =
     source.original_url || source.url;
@@ -349,7 +358,8 @@ for (
       `Batch failed: ${error.message}`
     );
 
-    if (/Apify start failed: (401|402|403|429)\b/.test(error.message)) {
+    if (isCriticalError(error)) {
+      stopCollection = true;
       break;
     }
   }
@@ -360,6 +370,8 @@ for (
 const unresolved = videos.filter(v => !v.video_id);
 
 for (const source of unresolved) {
+  if (stopCollection) break;
+
   try {
     const items = await scrape([source]);
 
@@ -404,7 +416,8 @@ for (const source of unresolved) {
       `Short URL failed: ${source.creator}: ${error.message}`
     );
 
-    if (/Apify start failed: (401|402|403|429)\b/.test(error.message)) {
+    if (isCriticalError(error)) {
+      stopCollection = true;
       break;
     }
   }
@@ -419,6 +432,7 @@ if (!matched) {
 const output = {
   updated_at: new Date().toISOString(),
   test_mode: test,
+  partial: failedBatches > 0 || stopCollection,
   videos: [...results.values()]
 };
 
