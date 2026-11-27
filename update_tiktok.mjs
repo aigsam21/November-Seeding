@@ -426,7 +426,13 @@ for (
 
 // Process unresolved short URLs separately.
 
-const unresolved = videos.filter(v => !v.video_id);
+const unresolved = videos.filter(v =>
+  !v.video_id &&
+  (!missingOnly ||
+    !previousByUrl.has(
+      normalizeUrl(v.original_url)
+    ))
+);
 
 for (const source of unresolved) {
   if (stopCollection) break;
@@ -485,9 +491,19 @@ for (const source of unresolved) {
 
 // Do not overwrite metrics if collection failed completely.
 
-if (!matchedIds.size) {
+if (!matchedIds.size && !missingOnly) {
   throw new Error(
     'No new valid views collected; metrics.json unchanged'
+  );
+}
+
+if (
+  missingOnly &&
+  !matchedIds.size &&
+  (known.length || unresolved.length)
+) {
+  throw new Error(
+    'No missing videos successfully collected'
   );
 }
 
@@ -500,10 +516,10 @@ const outputFile = test
 const output = {
   updated_at: new Date().toISOString(),
   test_mode: test,
-  partial:
-    failedBatches > 0 ||
-    stopCollection ||
-    matchedInputs.size < videos.length,
+partial:
+  failedBatches > 0 ||
+  stopCollection ||
+  matchedInputs.size < known.length + unresolved.length,
   videos: [...results.values()]
 };
 
