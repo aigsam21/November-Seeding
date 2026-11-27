@@ -1,59 +1,46 @@
+
 const DATA = {
-    "owner": [
-        ["신유", 154, 217],
-        ["유연식", 155, 182],
-        ["강미경", 124, 164]
-    ],
+  "owner": [
+    ["신유", 161, 221],
+    ["유연식", 179, 213],
+    ["강미경", 133, 175]
+  ],
 
-    "country": [
-        ["미국", 85, 104],
-        ["캐나다", 62, 78],
-        ["멕시코", 98, 118],
-        ["영국", 25, 30],
-        ["독일", 10, 13],
-        ["폴란드", 55, 81],
-        ["스페인", 42, 65],
-        ["이탈리아", 39, 51],
-        ["프랑스", 10, 12],
-        ["네덜란드", 4, 6],
-        ["미기재", 3, 5]
-    ],
+  "country": [
+    ["멕시코", 103, 121],
+    ["미국", 83, 103],
+    ["폴란드", 64, 90],
+    ["캐나다", 66, 83],
+    ["스페인", 52, 76],
+    ["이탈리아", 41, 55],
+    ["영국", 31, 37],
+    ["독일", 14, 19],
+    ["프랑스", 12, 15],
+    ["네덜란드", 7, 10]
+  ],
 
-    "product": [
-        ["Peel Shot Kojic Acid Turmeric Body Spray", 233, 285],
-        ["Peel Shot Black Rice Ampoule", 176, 245],
-        ["Cemenrete Calcium Multi Balm", 11, 15],
-        ["CACTOX 3-STEP NOSE MASK PACK", 6, 9],
-        ["Peel Shot TX (Tranexamic Acid) Body Spray", 3, 5],
-        ["CACTOX PORE RELIEF MULTI BALM", 2, 3],
-        ["TX Kojic Acid Turmeric Toner Pad", 1, 1]
-    ],
+  "product": [
+    ["Peel Shot Kojic Acid Turmeric Body Spray", 240, 290],
+    ["Peel Shot Black Rice Ampoule", 212, 290],
+    ["Cemenrete Calcium Multi Balm", 11, 14],
+    ["CACTOX 3-STEP NOSE MASK PACK", 6, 9],
+    ["Peel Shot TX (Tranexamic Acid) Body Spray", 1, 3],
+    ["CACTOX PORE RELIEF MULTI BALM", 2, 2],
+    ["TX Kojic Acid Turmeric Toner Pad", 1, 1]
+  ],
 
-    "cohort": [
-        ["11월 시딩", 192, 269],
-        ["10월 시딩", 175, 216],
-        ["9월 시딩", 44, 49],
-        ["기존 시딩", 22, 29]
-    ],
+  "cohort": [
+    ["11월 시딩", 235, 322],
+    ["10월 시딩", 178, 218],
+    ["9월 시딩", 43, 46],
+    ["기존 시딩", 17, 23]
+  ],
 
-    "platform": [
-        ["TikTok", 420, 447],
-        ["Instagram", 103, 106],
-        ["기타", 10, 10]
-    ],
+  "platform": [
+    ["TikTok", 457, 480],
+    ["Instagram", 113, 116],
+    ["기타", 13, 13]
+  ],
 
-    "level": [
-        ["Nano", 341],
-        ["Micro", 74],
-        ["Mid", 9],
-    ],
-
-    "venn": {
-        "tiktokOnly": 329,
-        "instagramOnly": 12,
-        "bothOnly": 81,
-        "allThree": 10
-    },
-
-    "total": [432, 563]
+  "total": [473, 609]
 };
