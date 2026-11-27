@@ -37,11 +37,18 @@ const DATA = {
     ["Instagram",113,116],
     ["기타",13,13]
   ],
-    "venn": {
-    "tiktokOnly": 361,
+  "venn": {
+    "tiktokOnly": 360,
     "bothOnly": 85,
     "instagramOnly": 16,
     "allThree": 13
   },
+  "level": [
+    ["Nano",370],
+    ["Micro",90],
+    ["Mid",12],
+    ["Macro",1],
+    ["Mega",1]
+  ],
   "total": [474,610]
 };
