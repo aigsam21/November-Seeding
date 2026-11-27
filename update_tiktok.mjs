@@ -153,6 +153,9 @@ for (const v of prepared) {
 
 const videos = [...unique.values()];
 
+const missingOnly =
+  !test && process.env.MISSING_ONLY === 'true';
+
 console.log(`Total source links: ${all.length}`);
 console.log(`Selected: ${selected.length}`);
 console.log(`Unique inputs: ${videos.length}`);
@@ -373,7 +376,10 @@ function saveItem(item, source) {
 
 // Collect videos with known IDs in batches of 25.
 
-const known = videos.filter(v => v.video_id);
+const known = videos.filter(v =>
+  v.video_id &&
+  (!missingOnly || !results.has(String(v.video_id)))
+);
 
 for (
   let offset = 0;
