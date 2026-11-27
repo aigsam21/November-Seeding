@@ -86,7 +86,7 @@ function getViews(v) {
   return null;
 }
 
-// Preserve original URLs and resolve short links.
+// Resolve short TikTok URLs.
 
 async function resolveVideo(v) {
   const source = {
@@ -127,6 +127,8 @@ async function resolveVideo(v) {
   return source;
 }
 
+// Resolve URLs in groups of 10.
+
 const prepared = [];
 
 for (let i = 0; i < selected.length; i += 10) {
@@ -136,6 +138,8 @@ for (let i = 0; i < selected.length; i += 10) {
     ...await Promise.all(group.map(resolveVideo))
   );
 }
+
+// Remove duplicate inputs.
 
 const unique = new Map();
 
@@ -149,6 +153,7 @@ for (const v of prepared) {
 
 const videos = [...unique.values()];
 
+console.log(`Total source links: ${all.length}`);
 console.log(`Selected: ${selected.length}`);
 console.log(`Unique inputs: ${videos.length}`);
 
@@ -158,39 +163,63 @@ console.log(
   }`
 );
 
+// Preserve previous views only for current publications.
+
 const results = new Map();
 
-// Preserve previously collected views.
+const previousById = new Map();
+const previousByUrl = new Map();
 
 for (const v of old.videos || []) {
+  const id = extractId(v.video_id);
+
   if (
-    v.video_id &&
-    typeof v.views === 'number' &&
-    Number.isFinite(v.views) &&
-    v.views >= 0
-  ) {
-    results.set(String(v.video_id), v);
+    !id ||
+    typeof v.views !== 'number' ||
+    !Number.isFinite(v.views) ||
+    v.views < 0
+  ) continue;
+
+  previousById.set(id, v);
+
+  for (const url of [
+    v.original_url,
+    v.source_url,
+    v.url
+  ]) {
+    const key = normalizeUrl(url);
+
+    if (key) {
+      previousByUrl.set(key, v);
+    }
   }
 }
-
-// Restore original URL mappings for resolved videos.
 
 for (const source of videos) {
-  if (!source.video_id) continue;
+  const previous = source.video_id
+    ? previousById.get(String(source.video_id))
+    : previousByUrl.get(
+        normalizeUrl(source.original_url)
+      );
 
-  const id = String(source.video_id);
-  const previous = results.get(id);
+  if (!previous) continue;
 
-  if (previous) {
-    results.set(id, {
-      ...previous,
-      owner: source.owner,
-      creator: source.creator,
-      original_url: source.original_url,
-      source_url: source.original_url
-    });
-  }
+  const id = String(previous.video_id);
+
+  results.set(id, {
+    ...previous,
+    owner: source.owner,
+    creator: source.creator,
+    original_url: source.original_url,
+    source_url: source.original_url
+  });
 }
+
+console.log(
+  `Preserved current metrics: ${results.size}`
+);
+
+// Apify TikTok scraper.
 
 async function scrape(batch) {
   const resp = await fetch(
@@ -275,7 +304,11 @@ async function scrape(batch) {
   return dataset.json();
 }
 
-let matched = 0;
+// Track successful matches and failed batches.
+
+const matchedIds = new Set();
+const matchedInputs = new Set();
+
 let failedBatches = 0;
 let stopCollection = false;
 
@@ -294,6 +327,13 @@ function saveItem(item, source) {
     return false;
   }
 
+  if (
+    source.video_id &&
+    String(source.video_id) !== id
+  ) {
+    return false;
+  }
+
   const url = [
     item.webVideoUrl,
     item.url,
@@ -307,16 +347,27 @@ function saveItem(item, source) {
   const originalUrl =
     source.original_url || source.url;
 
+  const previous = results.get(id);
+
   results.set(id, {
     ...source,
+    platform: 'TikTok',
     video_id: id,
     url,
+    owner: previous?.owner ?? source.owner,
+    creator: previous?.creator ?? source.creator,
     original_url: originalUrl,
     source_url: originalUrl,
     views
   });
 
-  matched++;
+  matchedIds.add(id);
+
+  matchedInputs.add(
+    source.video_id ||
+    normalizeUrl(source.original_url)
+  );
+
   return true;
 }
 
@@ -337,20 +388,22 @@ for (
 
   try {
     const items = await scrape(batch);
-    let found = 0;
+
+    const found = new Set();
 
     for (const item of items) {
       const id = getId(item);
 
       if (saveItem(item, byId.get(id))) {
-        found++;
+        found.add(id);
       }
     }
 
     console.log(
       `Batch ${Math.floor(offset / 25) + 1}: ` +
-      `${found}/${batch.length} matched`
+      `${found.size}/${batch.length} matched`
     );
+
   } catch (error) {
     failedBatches++;
 
@@ -409,6 +462,7 @@ for (const source of unresolved) {
         `Short URL unmatched: ${source.creator}`
       );
     }
+
   } catch (error) {
     failedBatches++;
 
@@ -423,25 +477,41 @@ for (const source of unresolved) {
   }
 }
 
-if (!matched) {
+// Do not overwrite metrics if collection failed completely.
+
+if (!matchedIds.size) {
   throw new Error(
     'No new valid views collected; metrics.json unchanged'
   );
 }
 
+// Save test results separately from the live report.
+
+const outputFile = test
+  ? 'metrics_test.json'
+  : 'metrics.json';
+
 const output = {
   updated_at: new Date().toISOString(),
   test_mode: test,
-  partial: failedBatches > 0 || stopCollection,
+  partial:
+    failedBatches > 0 ||
+    stopCollection ||
+    matchedInputs.size < videos.length,
   videos: [...results.values()]
 };
 
 fs.writeFileSync(
-  'metrics.json',
+  outputFile,
   JSON.stringify(output, null, 2) + '\n'
 );
 
-console.log(`New matches: ${matched}`);
+console.log(`Total source links: ${all.length}`);
+console.log(`Unique inputs: ${videos.length}`);
+console.log(`New matches: ${matchedIds.size}`);
+console.log(`Matched inputs: ${matchedInputs.size}`);
 console.log(`Saved unique videos: ${results.size}`);
 console.log(`Failed batches: ${failedBatches}`);
+console.log(`Partial: ${output.partial}`);
 console.log(`Mode: ${test ? 'TEST' : 'FULL'}`);
+console.log(`Saved to: ${outputFile}`);
