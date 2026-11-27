@@ -17,10 +17,6 @@ const old = fs.existsSync(file)
   ? JSON.parse(fs.readFileSync(file, 'utf8'))
   : { videos: [] };
 
-const results = new Map(
-  (old.videos || []).map(v => [v.video_id, v])
-);
-
 const sleep = ms =>
   new Promise(resolve => setTimeout(resolve, ms));
 
@@ -33,7 +29,38 @@ const sources = new Map();
 
 for (const v of selected) {
   const id = getCode(v.url) || v.shortCode;
-  if (id && !sources.has(id)) sources.set(id, v);
+
+  if (id && !sources.has(id)) {
+    sources.set(id, v);
+  }
+}
+
+// Preserve only metrics from the current source list.
+
+const results = new Map();
+
+for (const v of old.videos || []) {
+  const id = v.shortCode
+    || getCode(v.url)
+    || v.video_id;
+
+  const source = sources.get(id);
+
+  if (
+    !source ||
+    typeof v.views !== 'number' ||
+    !Number.isFinite(v.views) ||
+    v.views < 0
+  ) continue;
+
+  results.set(id, {
+    ...v,
+    ...source,
+    platform: 'Instagram',
+    video_id: id,
+    shortCode: id,
+    views: v.views
+  });
 }
 
 async function scrape(batch, type) {
@@ -54,15 +81,19 @@ async function scrape(batch, type) {
   );
 
   if (!resp.ok) {
-    throw new Error(`Apify start failed: ${resp.status}`);
+    throw new Error(
+      `Apify start failed: ${resp.status}`
+    );
   }
 
   const run = (await resp.json()).data;
   let state = run.status;
 
   const terminal = [
-    'SUCCEEDED', 'FAILED',
-    'ABORTED', 'TIMED-OUT'
+    'SUCCEEDED',
+    'FAILED',
+    'ABORTED',
+    'TIMED-OUT'
   ];
 
   for (
@@ -82,7 +113,9 @@ async function scrape(batch, type) {
     );
 
     if (!check.ok) {
-      throw new Error(`Status failed: ${check.status}`);
+      throw new Error(
+        `Status failed: ${check.status}`
+      );
     }
 
     state = (await check.json()).data.status;
@@ -102,15 +135,22 @@ async function scrape(batch, type) {
   );
 
   if (!dataset.ok) {
-    throw new Error(`Dataset failed: ${dataset.status}`);
+    throw new Error(
+      `Dataset failed: ${dataset.status}`
+    );
   }
 
   return dataset.json();
 }
 
-let matched = 0;
+let failedBatches = 0;
+let stopCollection = false;
 
+const matchedIds = new Set();
 const videos = [...sources.values()];
+
+console.log(`Selected: ${selected.length}`);
+console.log(`Unique inputs: ${videos.length}`);
 
 const groups = [
   {
@@ -128,6 +168,8 @@ const groups = [
 ];
 
 for (const group of groups) {
+  if (stopCollection) break;
+
   for (
     let offset = 0;
     offset < group.videos.length;
@@ -138,57 +180,89 @@ for (const group of groups) {
     );
 
     const allowed = new Set(
-      batch.map(v => getCode(v.url) || v.shortCode)
+      batch.map(v =>
+        getCode(v.url) || v.shortCode
+      )
     );
 
-    const items = await scrape(batch, group.type);
+    try {
+      const items = await scrape(
+        batch, group.type
+      );
 
-    let found = 0;
+      const found = new Set();
 
-    for (const item of items) {
-      if (item.error || item.errorCode) continue;
+      for (const item of items) {
+        if (item.error || item.errorCode) {
+          continue;
+        }
 
-      const id = item.shortCode || getCode(item.url);
-      const source = sources.get(id);
+        const id = item.shortCode
+          || getCode(item.url);
 
-      if (!source || !allowed.has(id)) continue;
+        const source = sources.get(id);
 
-      const raw = item.videoPlayCount;
+        if (!source || !allowed.has(id)) {
+          continue;
+        }
 
-      if (
-        typeof raw !== 'number' &&
-        !(typeof raw === 'string' && /^\d+$/.test(raw))
-      ) continue;
+        const raw = item.videoPlayCount;
 
-      const views = Number(raw);
+        if (
+          typeof raw !== 'number' &&
+          !(
+            typeof raw === 'string' &&
+            /^\d+$/.test(raw.trim())
+          )
+        ) continue;
 
-      if (!Number.isFinite(views) || views < 0) {
-        continue;
+        const views = Number(raw);
+
+        if (
+          !Number.isFinite(views) ||
+          views < 0
+        ) continue;
+
+        results.set(id, {
+          ...source,
+          platform: 'Instagram',
+          video_id: id,
+          shortCode: id,
+          url: item.url || source.url,
+          views,
+          likes: item.likesCount ?? null,
+          comments: item.commentsCount ?? null,
+          timestamp: item.timestamp ?? null
+        });
+
+        found.add(id);
+        matchedIds.add(id);
       }
 
-      results.set(id, {
-        ...source,
-        platform: 'Instagram',
-        video_id: id,
-        shortCode: id,
-        url: item.url || source.url,
-        views,
-        likes: item.likesCount ?? null,
-        comments: item.commentsCount ?? null,
-        timestamp: item.timestamp ?? null
-      });
+      console.log(
+        `${group.type}: ` +
+        `${found.size}/${batch.length} matched`
+      );
 
-      found++;
-      matched++;
+    } catch (error) {
+      failedBatches++;
+
+      console.error(
+        `Batch failed: ${error.message}`
+      );
+
+      if (
+        /Apify start failed: (401|402|403|429)\b/
+          .test(error.message)
+      ) {
+        stopCollection = true;
+        break;
+      }
     }
-
-    console.log(
-      `${group.type}: ${found}/${batch.length} matched`
-    );
   }
 }
 
-if (!matched) {
+if (!matchedIds.size) {
   throw new Error(
     'No valid Instagram views; metrics unchanged'
   );
@@ -197,6 +271,10 @@ if (!matched) {
 const output = {
   updated_at: new Date().toISOString(),
   test_mode: test,
+  partial:
+    failedBatches > 0 ||
+    stopCollection ||
+    matchedIds.size < videos.length,
   videos: [...results.values()]
 };
 
@@ -205,6 +283,7 @@ fs.writeFileSync(
   JSON.stringify(output, null, 2) + '\n'
 );
 
-console.log(`New matches: ${matched}`);
+console.log(`New matches: ${matchedIds.size}`);
 console.log(`Saved videos: ${results.size}`);
+console.log(`Failed batches: ${failedBatches}`);
 console.log(`Mode: ${test ? 'TEST' : 'FULL'}`);
