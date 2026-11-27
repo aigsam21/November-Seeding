@@ -5,13 +5,22 @@ on:
   workflow_dispatch:
     inputs:
       test_mode:
-        description: 'Test 5 videos or check all'
+        description: 'Test 5 videos'
         required: true
         type: choice
         options:
           - 'true'
           - 'false'
         default: 'true'
+
+      missing_only:
+        description: 'Collect only missing video views'
+        required: true
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+        default: 'false'
 
 permissions:
   contents: write
@@ -31,9 +40,11 @@ jobs:
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           TEST_MODE: ${{ inputs.test_mode || 'false' }}
+          MISSING_ONLY: ${{ inputs.missing_only || 'false' }}
         run: node update_tiktok.mjs
 
       - name: Save updated metrics.json
+        if: ${{ inputs.test_mode == 'false' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
